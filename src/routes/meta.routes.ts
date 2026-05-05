@@ -1,8 +1,9 @@
-import { Router } from "express";
-import { MetaController } from "../controllers/meta.controller";
+import { Router } from 'express';
+import { metaController } from '../controllers/meta.controller';
 
 const router = Router();
 
-router.get("/meta", MetaController.getMetaData);
+// GET /meta — public
+router.get('/', metaController.getMeta);
 
 export default router;

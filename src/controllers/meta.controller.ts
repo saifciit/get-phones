@@ -1,23 +1,12 @@
-import { Request, Response, NextFunction } from "express";
-import { MetaRepository } from "../repositories/meta.repository";
+import { Request, Response } from 'express';
+import { ALLOWED_BRANDS, ALLOWED_CITIES, CONDITIONS } from '../utils/constants';
 
-export class MetaController {
-  static async getMetaData(req: Request, res: Response, next: NextFunction) {
-    try {
-      const [brands, cities] = await Promise.all([
-        MetaRepository.getBrands(),
-        MetaRepository.getCities()
-      ]);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          brands,
-          cities
-        }
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-}
+export const metaController = {
+  getMeta(_req: Request, res: Response) {
+    res.json({
+      brands:     ALLOWED_BRANDS,
+      cities:     ALLOWED_CITIES,
+      conditions: CONDITIONS,
+    });
+  },
+};
