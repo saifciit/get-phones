@@ -18,8 +18,8 @@ async function seed() {
   if (!existing) {
     const hash = await bcrypt.hash('demo1234', 12);
     await pool.execute(
-      `INSERT INTO users (id, name, email, phone, password_hash) VALUES (?, ?, ?, ?, ?)`,
-      [uuidv4(), 'Demo User', email, '+923001234567', hash]
+      `INSERT INTO users (id, name, email, phone, password_hash, is_verified) VALUES (?, ?, ?, ?, ?, ?)`,
+      [uuidv4(), 'Demo User', email, '+923001234567', hash, 1]
     );
     console.log('  ✔  Demo user created — demo@easyphones.pk / demo1234');
   } else {

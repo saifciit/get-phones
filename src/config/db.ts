@@ -18,7 +18,7 @@ export default pool;
 
 /** Convenience helper — returns rows typed as T[] */
 export async function query<T = any>(sql: string, values?: any[]): Promise<T[]> {
-  const [rows] = await pool.execute(sql, values);
+  const [rows] = await pool.query(sql, values);
   return rows as T[];
 }
 
@@ -30,6 +30,6 @@ export async function queryOne<T = any>(sql: string, values?: any[]): Promise<T 
 
 /** For INSERT / UPDATE / DELETE — returns ResultSetHeader */
 export async function execute(sql: string, values?: any[]) {
-  const [result] = await pool.execute(sql, values);
+  const [result] = await pool.query(sql, values);
   return result as mysql.ResultSetHeader;
 }
