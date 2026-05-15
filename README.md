@@ -1,69 +1,133 @@
-# EasyPhones Backend — PhoneBecho API
+# EasyPhones API — .NET 9
 
-Express + TypeScript + MySQL2 backend for the PhoneBecho Flutter marketplace app.
+Phone marketplace REST API converted from Node.js/Express/TypeScript to .NET 9 Clean Architecture.
 
----
+## Architecture
+
+```
+EasyPhones.Domain          — Entities, repository interfaces, enums (no dependencies)
+EasyPhones.Application     — Services, DTOs, exceptions, constants (depends on Domain)
+EasyPhones.Persistence     — EF Core DbContext + repository implementations (depends on Domain)
+EasyPhones.Infrastructure  — Email (MailKit) + File services (depends on Application)
+EasyPhones.WebAPI          — Controllers, middleware, DI wiring (depends on all)
+```
+
+## Tech Stack
+
+| Node.js (original)       | .NET 9 (this project)                        |
+|--------------------------|----------------------------------------------|
+| Express                  | ASP.NET Core 9 Web API                       |
+| mysql2                   | EF Core 9 + Pomelo MySQL provider            |
+| bcryptjs                 | BCrypt.Net-Next                              |
+| jsonwebtoken             | System.IdentityModel.Tokens.Jwt              |
+| nodemailer               | MailKit / MimeKit                            |
+| multer (memory storage)  | IFormFile → byte[] stored as LONGBLOB        |
+| express-validator        | Data Annotations + ModelState                |
+| helmet / cors            | Built-in ASP.NET Core middleware             |
+| express-rate-limit       | AspNetCoreRateLimit (add if needed)          |
+
+## Endpoints
+
+### Auth  `/api/auth`
+| Method | Path                     | Auth | Description                          |
+|--------|--------------------------|------|--------------------------------------|
+| POST   | /register                | —    | Register (sends verification email)  |
+| POST   | /login                   | —    | Login → access + refresh tokens      |
+| POST   | /refresh                 | —    | Rotate refresh token                 |
+| POST   | /logout                  | ✓    | Revoke refresh token                 |
+| GET    | /verify-email?token=...  | —    | Verify email address                 |
+| POST   | /forgot-password         | —    | Send password reset email            |
+| POST   | /reset-password          | —    | Reset password via token             |
+| GET    | /me                      | ✓    | Get current user                     |
+
+### Ads  `/api/ads`
+| Method | Path    | Auth | Description                                  |
+|--------|---------|------|----------------------------------------------|
+| GET    | /       | —    | List ads (filter, sort, paginate)            |
+| GET    | /my     | ✓    | Current user's ads                           |
+| GET    | /:id    | —    | Single ad                                    |
+| POST   | /       | ✓    | Create ad (multipart, field `photos`)        |
+| PUT    | /:id    | ✓    | Update ad (multipart, optional `photos`)     |
+| DELETE | /:id    | ✓    | Soft-delete ad                               |
+
+### Users  `/api/users`
+| Method | Path           | Auth | Description               |
+|--------|----------------|------|---------------------------|
+| GET    | /:id           | —    | Public profile + ad count |
+| PUT    | /me            | ✓    | Update name / phone       |
+| PUT    | /me/avatar     | ✓    | Upload avatar image       |
+| PUT    | /me/password   | ✓    | Change password           |
+
+### Files  `/api/files`
+| Method | Path                     | Auth | Description        |
+|--------|--------------------------|------|--------------------|
+| GET    | /:module/:filename       | —    | Serve stored blob  |
+
+### Meta  `/api/meta`
+| Method | Path | Auth | Description                            |
+|--------|------|------|----------------------------------------|
+| GET    | /    | —    | Allowed brands, cities, conditions     |
+
+## Query Params — GET /api/ads
+| Param      | Type   | Default | Description                                     |
+|------------|--------|---------|-------------------------------------------------|
+| page       | int    | 1       | Page number                                     |
+| limit      | int    | 20      | Items per page (max 50)                         |
+| q          | string | —       | Text search (title, brand, model, city)         |
+| brand      | string | —       | Filter by brand                                 |
+| condition  | string | —       | brandNew \| likeNew \| good \| fair             |
+| city       | string | —       | Filter by city                                  |
+| min_price  | decimal| —       | Minimum price                                   |
+| max_price  | decimal| —       | Maximum price                                   |
+| sort       | string | newest  | newest \| oldest \| price_asc \| price_desc     |
 
 ## Setup
 
-```bash
-cp .env.example .env
-# Fill in DB credentials and JWT secrets
+### 1. Prerequisites
+- .NET 9 SDK
+- MySQL 8+
 
-npm install
-npm run db:migrate     # creates all tables
-npm run db:seed        # optional demo user
-npm run dev            # ts-node-dev dev server
+### 2. Configure `appsettings.json`
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Port=3306;Database=easyphones;User=root;Password=yourpassword;"
+  },
+  "JwtOptions": {
+    "SecretKey": "your-32-char-access-secret-key-here",
+    "RefreshSecretKey": "your-32-char-refresh-secret-key-here",
+    "Issuer": "EasyPhones",
+    "Audience": "EasyPhonesApp",
+    "AccessExpiresIn": "15m",
+    "RefreshExpiresIn": "30d"
+  },
+  "App": {
+    "FrontendUrl": "http://localhost:3000",
+    "AllowedOrigins": "http://localhost:3000"
+  },
+  "Smtp": {
+    "Host": "smtp.example.com",
+    "Port": "587",
+    "User": "user@example.com",
+    "Pass": "password",
+    "From": "EasyPhones <noreply@easyphones.pk>"
+  }
+}
 ```
 
----
+### 3. Run
+```bash
+cd EasyPhones.WebAPI
+dotnet run
+```
+The database tables are created automatically via `EnsureCreated()` on startup.
 
-## API Reference
-
-| Method | Endpoint               | Auth    | Description                          |
-|--------|------------------------|---------|--------------------------------------|
-| POST   | /api/auth/register     | —       | Create account                       |
-| POST   | /api/auth/login        | —       | Login, get tokens                    |
-| POST   | /api/auth/refresh      | —       | Rotate refresh token                 |
-| POST   | /api/auth/logout       | Bearer  | Revoke refresh token                 |
-| GET    | /api/auth/me           | Bearer  | Get current user                     |
-| GET    | /api/ads               | —       | Browse ads (paginated, filterable)   |
-| GET    | /api/ads/my            | Bearer  | My ads (all, incl. inactive)         |
-| GET    | /api/ads/:id           | —       | Single ad                            |
-| POST   | /api/ads               | Bearer  | Create ad                            |
-| PUT    | /api/ads/:id           | Bearer  | Update ad (owner only)               |
-| DELETE | /api/ads/:id           | Bearer  | Soft-delete ad (owner only)          |
-| GET    | /api/meta              | —       | Brands, cities, conditions           |
-| POST   | /api/upload/presign    | Bearer  | Get S3 presigned upload URLs         |
-| GET    | /api/users/:id         | —       | Public profile + ad count            |
-| PUT    | /api/users/me          | Bearer  | Update name/phone                    |
-| PUT    | /api/users/me/avatar   | Bearer  | Update avatar URL                    |
-| PUT    | /api/users/me/password | Bearer  | Change password                      |
-
----
-
-## GET /api/ads — Query Parameters
-
-| Param      | Type    | Default | Description                                  |
-|------------|---------|---------|----------------------------------------------|
-| page       | int     | 1       | Page number                                  |
-| limit      | int     | 20      | Items per page (max 50)                      |
-| q          | string  | —       | Full-text search (title, brand, model, city) |
-| brand      | string  | —       | Filter by brand (case-insensitive)           |
-| condition  | string  | —       | brandNew / likeNew / good / fair             |
-| city       | string  | —       | Filter by city (case-insensitive)            |
-| min_price  | number  | —       | Min price in PKR                             |
-| max_price  | number  | —       | Max price in PKR                             |
-| sort       | string  | newest  | newest / oldest / price_asc / price_desc     |
-
----
+### 4. Swagger
+Open http://localhost:5000/swagger in development.
 
 ## Notes
-
-- **No Prisma** — raw `mysql2/promise` pool with typed helpers in `src/config/db.ts`
-- **No repository layer** — services call the DB directly
-- **Refresh token rotation** — every `/auth/refresh` call revokes the old token and issues a new one
-- **Soft deletes** — `DELETE /ads/:id` sets `is_active = false`, never removes the row
-- **seller_name denormalization** — stored on each ad; synced when user updates their name
-- **Image uploads** — S3 presigned URL flow; the API never receives image bytes
-- **Full-text search** — MySQL `FULLTEXT` index on `title, brand, model, city` with `BOOLEAN MODE`
+- Files are stored as `LONGBLOB` in MySQL (same as original Node backend).
+- JWT uses symmetric HMAC-SHA256 (HS256) — same as the original.
+- Refresh tokens are rotated on every use (stored as SHA-256 hashes).
+- Photos are stored in the `files` table; photo paths are serialized as JSON in `phone_ads.photo_urls`.
+- The `condition_val` column uses a MySQL ENUM matching the original schema values.

@@ -129,3 +129,8 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+.vs
+bin
+debug
+obj
