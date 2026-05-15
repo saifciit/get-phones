@@ -3,7 +3,7 @@ import { usersService } from '../services/users.service';
 import { AuthRequest } from '../types';
 
 function baseUrl(req: Request): string {
-  return `${req.protocol}://${req.get('host')}`;
+  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 }
 
 export const usersController = {
