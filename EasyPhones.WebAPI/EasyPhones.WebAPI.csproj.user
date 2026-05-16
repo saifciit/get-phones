@@ -5,5 +5,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <ActiveDebugProfile>EasyPhones.WebAPI</ActiveDebugProfile>
+    <NameOfLastUsedPublishProfile>C:\Data\Github\get-phones\EasyPhones.WebAPI\Properties\PublishProfiles\FolderProfile.pubxml</NameOfLastUsedPublishProfile>
   </PropertyGroup>
 </Project>

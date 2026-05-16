@@ -17,8 +17,14 @@ public sealed class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        ConfigureUsers(builder);
+        ConfigurePhoneAds(builder);
+        ConfigureFiles(builder);
+        ConfigureRefreshTokens(builder);
+    }
 
-        // ── users ─────────────────────────────────────────────────────────────
+    private static void ConfigureUsers(ModelBuilder builder)
+    {
         builder.Entity<User>(e =>
         {
             e.ToTable("users");
@@ -39,17 +45,19 @@ public sealed class AppDbContext : DbContext
             e.HasIndex(x => x.Email).IsUnique();
             e.HasIndex(x => x.Phone).IsUnique();
         });
+    }
 
-        // ── phone_ads ─────────────────────────────────────────────────────────
+    private static void ConfigurePhoneAds(ModelBuilder builder)
+    {
         var conditionConverter = new ValueConverter<ConditionValue, string>(
             v => v == ConditionValue.BrandNew ? "brandNew"
-               : v == ConditionValue.LikeNew  ? "likeNew"
-               : v == ConditionValue.Good      ? "good"
-               :                                 "fair",
+               : v == ConditionValue.LikeNew ? "likeNew"
+               : v == ConditionValue.Good ? "good"
+               : "fair",
             v => v == "brandNew" ? ConditionValue.BrandNew
-               : v == "likeNew"  ? ConditionValue.LikeNew
-               : v == "good"     ? ConditionValue.Good
-               :                   ConditionValue.Fair);
+               : v == "likeNew" ? ConditionValue.LikeNew
+               : v == "good" ? ConditionValue.Good
+               : ConditionValue.Fair);
 
         builder.Entity<PhoneAd>(e =>
         {
@@ -81,8 +89,10 @@ public sealed class AppDbContext : DbContext
             e.HasIndex(x => x.UserId).HasDatabaseName("idx_ads_user");
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
+    }
 
-        // ── files ─────────────────────────────────────────────────────────────
+    private static void ConfigureFiles(ModelBuilder builder)
+    {
         builder.Entity<FileRecord>(e =>
         {
             e.ToTable("files");
@@ -95,12 +105,14 @@ public sealed class AppDbContext : DbContext
             e.Property(x => x.Data).HasColumnName("data").IsRequired().HasColumnType("longblob");
             e.Property(x => x.UploadedBy).HasColumnName("uploaded_by").HasMaxLength(36);
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
-            e.Ignore(x => x.UpdatedAt); // files table has no updated_at
+            e.Ignore(x => x.UpdatedAt);
             e.HasIndex(x => x.Path).IsUnique();
             e.HasIndex(x => x.UploadedBy).HasDatabaseName("idx_files_uploader");
         });
+    }
 
-        // ── refresh_tokens ────────────────────────────────────────────────────
+    private static void ConfigureRefreshTokens(ModelBuilder builder)
+    {
         builder.Entity<RefreshToken>(e =>
         {
             e.ToTable("refresh_tokens");
@@ -111,9 +123,9 @@ public sealed class AppDbContext : DbContext
             e.Property(x => x.ExpiresAt).HasColumnName("expires_at");
             e.Property(x => x.Revoked).HasColumnName("revoked");
             e.Property(x => x.CreatedAt).HasColumnName("created_at");
-            e.Ignore(x => x.UpdatedAt); // refresh_tokens table has no updated_at
+            e.Ignore(x => x.UpdatedAt);
             e.HasIndex(x => x.TokenHash).IsUnique();
-            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).HasConstraintName("fk_rt_user").OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
